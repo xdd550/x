@@ -1,0 +1,184 @@
+# =========================
+# 全局设置
+# =========================
+seed: 42                  # 随机种子（保证实验可复现）
+device: gpu               # 训练设备: cpu / gpu
+
+# =========================
+# 数据配置
+# =========================
+data:
+  path: data/processed/phase_data.npz   # npz数据路径（由plt转换而来）
+
+  # 是否归一化（强烈建议开启）
+  normalize: true
+
+  # 归一化方式: minmax / standard
+  norm_type: minmax
+
+  # 训练使用的数据量（从全部数据中随机采样）
+  num_samples: 50000
+
+  # 是否打乱数据
+  shuffle: true
+
+  # 是否加入噪声（用于鲁棒性实验）
+  add_noise: false
+
+  # 噪声强度（标准差比例）
+  noise_level: 0.01
+
+
+# =========================
+# 模型结构（PINN网络）
+# =========================
+model:
+  input_dim: 3           # 输入维度 (x, y, t)
+  output_dim: 2          # 输出维度 (p, c)
+
+  hidden_dim: 128        # 每层神经元数
+  num_layers: 6          # 隐藏层层数
+
+  activation: tanh       # 激活函数: tanh / relu / gelu
+
+  # 是否使用残差连接（提高稳定性）
+  use_residual: false
+
+
+# =========================
+# 物理模型（对应你的C代码）
+# =========================
+physics:
+
+  # 是否启用相场方程
+  use_phase_field: true
+
+  # 是否启用成分扩散方程
+  use_concentration: false
+
+  # 网格步长（必须和C代码一致）
+  deltx: 2.41e-6
+  delty: 2.41e-6
+  delt: 1.1e-8
+
+  # 常数（如果不反演则固定）
+  R: 8.31451
+
+  # 扩散系数（初值）
+  Ds: 1.08e-8
+  Dl: 1.0e-5
+
+  # 界面参数
+  gamma: 0.055
+
+  # 是否使用各向异性（你的cos(4θ)项）
+  use_anisotropy: true
+
+
+# =========================
+# 参数反演（核心模块）
+# =========================
+inverse:
+
+  # 是否开启参数反演
+  enable: true
+
+  # ---------- γ（各向异性） ----------
+  learn_gamma: true        # 是否学习gamma
+  gamma_init: 0.01         # 初始值（不要设太大）
+
+  # ---------- 扩散系数 ----------
+  learn_Ds: false
+  Ds_init: 1.0e-7
+
+  learn_Dl: false
+  Dl_init: 1.0e-5
+
+  # 限制参数范围（防止发散）
+  clamp: true
+  gamma_min: 0.0
+  gamma_max: 1.0
+
+
+# =========================
+# 训练配置
+# =========================
+train:
+
+  batch_size: 4096         # 每批数据量（PINN通常较大）
+  lr: 1e-3                 # 学习率
+
+  max_epochs: 1000        # 最大训练轮数
+
+  # 优化器: adam / lbfgs
+  optimizer: adam
+
+  # 学习率衰减
+  lr_scheduler: true
+  step_size: 5000
+  gamma: 0.5
+
+
+# =========================
+# 损失函数权重（非常关键）
+# =========================
+loss:
+
+  # 数据拟合项
+  lambda_data: 10.0
+
+  # PDE残差项（核心）
+  lambda_pde: 1.0
+
+  # 边界条件
+  lambda_bc: 1.0
+
+  # 初始条件
+  lambda_ic: 1.0
+
+
+# =========================
+# 采样策略（PINN核心）
+# =========================
+sampling:
+
+  # PDE采样点数量
+  num_collocation: 50000
+
+  # 是否均匀采样
+  uniform: true
+
+  # 是否重点采样界面区域（推荐后期加）
+  focus_interface: false
+
+
+# =========================
+# 日志与输出
+# =========================
+logging:
+
+  log_interval: 10       # 每多少步记录一次
+
+  # 是否保存模型
+  save_model: true
+
+  # 保存路径
+  save_dir: experiments/
+
+  # 是否记录gamma变化（反演很重要）
+  track_parameters: true
+
+
+# =========================
+# 调试模式（建议前期开启）
+# =========================
+debug:
+
+  # 是否使用小数据快速测试
+  small_run: true
+
+  # 使用数据量（调试用）
+  debug_samples: 2000
+
+  # 是否打印详细信息
+  verbose: true
